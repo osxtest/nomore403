@@ -320,15 +320,14 @@ func runAutocalibrate(options RequestOptions) (int, int) {
 	calibrationPaths := []string{"calibration_test_123456", "calib_nonexist_789xyz", "zz_calibrate_000"}
 	var samples []int
 
-	baseURI := options.uri
-	if !strings.HasSuffix(baseURI, "/") {
-		baseURI += "/"
+	u, err := url.Parse(options.uri)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	var lastStatusCode int
 	for _, path := range calibrationPaths {
-		calibrationURI := baseURI + path
-		resp, err := requestWithRetry("GET", calibrationURI, options.headers, options.proxy, options.rateLimit, options.timeout, options.redirect)
+		resp, err := requestWithRetry("GET", u.JoinPath(path).String(), options.headers, options.proxy, options.rateLimit, options.timeout, options.redirect)
 		if err != nil {
 			log.Printf("[!] Error during calibration request (%s): %v\n", path, err)
 			continue
