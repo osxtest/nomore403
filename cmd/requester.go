@@ -95,12 +95,14 @@ type RequestOptions struct {
 }
 
 // Thread-safe globals using atomic operations.
-var atomicVerbose int32
-var atomicDefaultCl int64
-var atomicCalibTolerance int64
-var atomicDefaultSc int32     // default request status code
-var atomicDefaultRespCl int64 // default request content-length (separate from calibration)
-var atomicFragmentCl int64    // fragment baseline content-length (URI#fragment response)
+var (
+	atomicVerbose        int32
+	atomicDefaultCl      int64
+	atomicCalibTolerance int64
+	atomicDefaultSc      int32 // default request status code
+	atomicDefaultRespCl  int64 // default request content-length (separate from calibration)
+	atomicFragmentCl     int64 // fragment baseline content-length (URI#fragment response)
+)
 
 func getVerbose() bool { return atomic.LoadInt32(&atomicVerbose) != 0 }
 func logVerbose(v ...interface{}) {
@@ -108,6 +110,7 @@ func logVerbose(v ...interface{}) {
 		log.Println(v...)
 	}
 }
+
 func setVerbose(v bool) {
 	var val int32
 	if v {
@@ -220,6 +223,12 @@ func baselineForTechnique(technique string) ResponseInfo {
 
 func isInteresting(result Result) bool {
 	baseline := baselineForTechnique(result.technique)
+
+	if sameContentType {
+		if baseline.contentType != result.contentType {
+			return false
+		}
+	}
 
 	if baseline.statusCode == 0 && baseline.contentLength == 0 && baseline.bodyHash == "" {
 		return true
@@ -726,28 +735,32 @@ func prioritizeTechniques(techniques []string, hints []string) []string {
 	return ordered
 }
 
-var uniqueResults = make(map[string]bool)
-var uniqueResultsByTechnique = make(map[string]map[string]bool)
-var verbTamperingResults = make(map[string]int)
-var techniqueBaselines = make(map[string]ResponseInfo)
-var topFindings []Result
-var printedBaselineHeader bool
-var printedFindingsHeader bool
-var printedTechniqueHeaders = make(map[string]bool)
-var executedTechniques = make(map[string]bool)
-var producedTechniques = make(map[string]bool)
-var seenTechniqueFamilies = make(map[string]bool)
-var suppressedTechniqueFamilies = make(map[string]int)
-var seenGlobalFamilies = make(map[string]int)
-var suppressedCrossTechniqueFamilies = make(map[string]int)
+var (
+	uniqueResults                    = make(map[string]bool)
+	uniqueResultsByTechnique         = make(map[string]map[string]bool)
+	verbTamperingResults             = make(map[string]int)
+	techniqueBaselines               = make(map[string]ResponseInfo)
+	topFindings                      []Result
+	printedBaselineHeader            bool
+	printedFindingsHeader            bool
+	printedTechniqueHeaders          = make(map[string]bool)
+	executedTechniques               = make(map[string]bool)
+	producedTechniques               = make(map[string]bool)
+	seenTechniqueFamilies            = make(map[string]bool)
+	suppressedTechniqueFamilies      = make(map[string]int)
+	seenGlobalFamilies               = make(map[string]int)
+	suppressedCrossTechniqueFamilies = make(map[string]int)
+)
 
 // smartDedupMax is the maximum number of results to show per technique per status+CL group
 // in non-verbose mode. Additional results are counted and summarized.
 const smartDedupMax = 3
 
 // techSignatureCounts tracks how many results per technique+status+CL we've seen.
-var techSignatureCounts = make(map[string]int)
-var techSignatureCountsMutex = &sync.Mutex{}
+var (
+	techSignatureCounts      = make(map[string]int)
+	techSignatureCountsMutex = &sync.Mutex{}
+)
 
 var (
 	printMutex               = &sync.Mutex{}
@@ -1716,7 +1729,7 @@ func requestMethods(options RequestOptions) {
 	}
 
 	w := goccm.New(maxGoroutines)
-	var verbTamperingResultsMutex = &sync.Mutex{}
+	verbTamperingResultsMutex := &sync.Mutex{}
 	p := newProgress("verb-tampering", len(lines))
 
 	for _, line := range lines {
@@ -1905,7 +1918,8 @@ func requestHeaders(options RequestOptions) {
 		go func(item struct {
 			Line string
 			IP   string
-		}) {
+		},
+		) {
 			defer w.Done()
 			defer p.done()
 
@@ -2438,8 +2452,10 @@ func requestPayloadPositions(options RequestOptions) {
 }
 
 // curlAvailable checks if curl is installed and accessible in PATH.
-var curlChecked bool
-var curlExists bool
+var (
+	curlChecked bool
+	curlExists  bool
+)
 
 func isCurlAvailable() bool {
 	if curlChecked {
@@ -2772,7 +2788,8 @@ func requestHopByHop(options RequestOptions) {
 		go func(target struct {
 			name  string
 			value string
-		}) {
+		},
+		) {
 			defer w.Done()
 			defer p.done()
 
@@ -2998,7 +3015,8 @@ func requestMethodOverrideBody(options RequestOptions) {
 				contentType string
 				body        string
 				label       string
-			}, overrideMethod string) {
+			}, overrideMethod string,
+			) {
 				defer w.Done()
 				defer p.done()
 
@@ -3211,7 +3229,8 @@ func requestHeaderConfusion(options RequestOptions) {
 		go func(payload struct {
 			headers []header
 			label   string
-		}) {
+		},
+		) {
 			defer w.Done()
 			defer p.done()
 
@@ -3276,7 +3295,8 @@ func requestHostOverride(options RequestOptions) {
 		go func(payload struct {
 			headers []header
 			label   string
-		}) {
+		},
+		) {
 			defer w.Done()
 			defer p.done()
 
@@ -3333,7 +3353,8 @@ func requestForwardedTrust(options RequestOptions) {
 		go func(payload struct {
 			headers []header
 			label   string
-		}) {
+		},
+		) {
 			defer w.Done()
 			defer p.done()
 
@@ -3384,7 +3405,8 @@ func requestProtoConfusion(options RequestOptions) {
 		go func(payload struct {
 			headers []header
 			label   string
-		}) {
+		},
+		) {
 			defer w.Done()
 			defer p.done()
 
@@ -3525,7 +3547,8 @@ func requestRawDuplicates(options RequestOptions) {
 		go func(payload struct {
 			headers []header
 			label   string
-		}) {
+		},
+		) {
 			defer w.Done()
 			defer p.done()
 
@@ -3588,7 +3611,8 @@ func requestRawAuthority(options RequestOptions) {
 		go func(payload struct {
 			headers []header
 			label   string
-		}) {
+		},
+		) {
 			defer w.Done()
 			defer p.done()
 
@@ -3723,7 +3747,8 @@ func requestRawDesync(options RequestOptions) {
 			headers       []header
 			body          string
 			label         string
-		}) {
+		},
+		) {
 			defer w.Done()
 			defer p.done()
 

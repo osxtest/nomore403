@@ -15,6 +15,7 @@ import (
 )
 
 var (
+	sameContentType   bool
 	bypassIP          string
 	cfgFile           string
 	delay             int
@@ -128,6 +129,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
+	rootCmd.PersistentFlags().BoolVarP(&sameContentType, "same-content-type", "", false, "Response Content-Type should be the same as baseline.")
 	rootCmd.PersistentFlags().StringVarP(&bypassIP, "bypass-ip", "i", "", "Use a specified IP address or hostname for bypassing access controls. Injects this IP in headers like 'X-Forwarded-For'.")
 	rootCmd.PersistentFlags().IntVarP(&delay, "delay", "d", 0, "Specify a delay between requests in milliseconds. Helps manage request rate (default: 0ms).")
 	rootCmd.PersistentFlags().StringVarP(&folder, "folder", "f", "", "Specify the folder location for payloads if not in the same directory as the executable.")
